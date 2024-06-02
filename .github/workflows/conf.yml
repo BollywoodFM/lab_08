@@ -1,71 +1,32 @@
-name: Data
-run-name: ${{ github.actor }}
+name: Dock
+run-name: Dockings=
 on: [push]
 jobs:
-  ubuntu:
+  Docker_container_run:
     runs-on: ubuntu-latest
     steps:
+      - name: apt-get docker.io
+        run: |
+          sudo apt-get remove containerd.io
+          sudo apt install docker.io docker-compose -y
+
       - name: check
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Test
-        run: |
-          cmake -H. -B_build -DBUILD_TESTS=ON -DBUILD_COVERAGE=ON
-          cmake --build _build
-          cmake --build _build --target test -- ARGS=--verbose
-      - name: Generate and send a code coverage report to Coveralls
-        uses: threeal/gcovr-action@v1.0.0
-        with:
-          excludes: third-party
-          coveralls-send: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-  make_lart:
-    if: startsWith( ${{ github.event.ref }} , '/refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Build Tests
-        run: |
-          cmake -H. -B_build -DBUILD_TESTS=ON -DBUILD_COVERAGE=ON
-          cmake --build _build
-          cmake --build _build --target test -- ARGS=--verbose
-      - name: Make CPack artifacts
-        run: |
-          cd _build
-          cpack -G "RPM"
-          cpack -G "TGZ"
-          cpack -G "DEB"
-          cd ..
-      - name: at
+
+      - name: Build docker
+        run: docker build -t builder .
+
+      - name: Start a container
+        run: docker run --name test -t builder ls
+
+      - name: Copy log
+        run: docker cp test:/repo/log.txt ./log.txt
+
+      - name: Upload file
         uses: actions/upload-artifact@v4
         with:
-          name: linux
-          path: _build/banking_app-*
-  make_winart:
-    if: startsWith( ${{ github.event.ref }} , '/refs/tags/v')
-    runs-on: windows-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Build
-        run: |
-          cmake -S D:/a/lab_06/lab_06 -B D:/a/lab_06/lab_06/_build
-          cmake --build _build
-      - name: CPack
-        run: |
-          cd _build
-          cpack -G "NSIS"
-          cpack -G "ZIP"
-          cd ..
-      - name: at
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows
-          path: _build/banking_app-*
+          name: logs
+          path: /home/runner/work/lab_08/lab_08/log.txt
 
