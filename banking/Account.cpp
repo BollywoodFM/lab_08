@@ -13,7 +13,7 @@ void Account::ChangeBalance(int diff) {
   if (!is_locked_) throw std::runtime_error("at first lock the account");
   balance_ += diff;
 }
-
+bool operator==(const Account el1, const Account el2) {return (el1.id_ == el2.id_);}
 void Account::Lock() {
   if (is_locked_) throw std::runtime_error("already locked");
   is_locked_ = true;
