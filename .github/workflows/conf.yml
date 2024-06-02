@@ -1,8 +1,27 @@
-name: test
-run-name: dat
+name: Data
+run-name: ${{ github.actor }}
 on: [push]
 jobs:
-  linux:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Test
+        run: |
+          cmake -H. -B_build -DBUILD_TESTS=ON -DBUILD_COVERAGE=ON
+          cmake --build _build
+          cmake --build _build --target test -- ARGS=--verbose
+      - name: Generate and send a code coverage report to Coveralls
+        uses: threeal/gcovr-action@v1.0.0
+        with:
+          excludes: third-party
+          coveralls-send: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  make_lart:
+    if: startsWith( ${{ github.event.ref }} , '/refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -14,9 +33,39 @@ jobs:
           cmake -H. -B_build -DBUILD_TESTS=ON -DBUILD_COVERAGE=ON
           cmake --build _build
           cmake --build _build --target test -- ARGS=--verbose
-      - name: Generate and send a code coverage report to Coveralls
-        uses: threeal/gcovr-action@v1.0.0
+      - name: Make CPack artifacts
+        run: |
+          cd _build
+          cpack -G "RPM"
+          cpack -G "TGZ"
+          cpack -G "DEB"
+          cd ..
+      - name: at
+        uses: actions/upload-artifact@v4
         with:
-          excludes: third-party
-          coveralls-send: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: linux
+          path: _build/banking_app-*
+  make_winart:
+    if: startsWith( ${{ github.event.ref }} , '/refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build
+        run: |
+          cmake -S D:/a/lab_06/lab_06 -B D:/a/lab_06/lab_06/_build
+          cmake --build _build
+      - name: CPack
+        run: |
+          cd _build
+          cpack -G "NSIS"
+          cpack -G "ZIP"
+          cd ..
+      - name: at
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: _build/banking_app-*
+
